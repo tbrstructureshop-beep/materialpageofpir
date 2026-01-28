@@ -71,14 +71,15 @@ const MaterialSection: React.FC<Props> = ({
   };
 
   const handleDeleteSelected = () => {
-    const indices = Array.from(selectedIndices).sort((a, b) => b - a);
+    // Adding explicit types (a: number, b: number) to fix arithmetic operation error
+    // which occurs when types are not correctly inferred for numeric sorting.
+    const indices = Array.from(selectedIndices).sort((a: number, b: number) => b - a);
     onRemoveRows(indices);
     setSelectedIndices(new Set());
   };
 
   const handleIndividualDelete = (idx: number) => {
     onRemoveRows([idx]);
-    // The useEffect cleanup will handle the selection set update
   };
 
   const isAllSelected = materials.length > 0 && selectedIndices.size === materials.length;
@@ -95,6 +96,7 @@ const MaterialSection: React.FC<Props> = ({
         </div>
       )}
 
+      {/* Header Container */}
       <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-col">
@@ -119,7 +121,7 @@ const MaterialSection: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* MOBILE SELECT ALL BAR */}
+        {/* MOBILE SELECT ALL BAR (Conditional) */}
         {isEditMode && (
           <div className="lg:hidden flex items-center justify-between p-3 bg-teal-50 border border-teal-100 rounded-xl animate-in slide-in-from-top-2 duration-300">
             <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={toggleSelectAll}>
@@ -143,13 +145,13 @@ const MaterialSection: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Desktop Table View */}
+      {/* Desktop Table View - Center Aligned */}
       <div className="hidden lg:block overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-center border-collapse">
           <thead>
             <tr className="bg-teal-600 text-white">
               {isEditMode && (
-                <th className="px-4 py-3 border-r border-teal-500 w-12 text-center">
+                <th className="px-4 py-3 border-r border-teal-500 w-12">
                   <div className="flex items-center justify-center">
                     <input 
                       type="checkbox" 
@@ -161,7 +163,7 @@ const MaterialSection: React.FC<Props> = ({
                   </div>
                 </th>
               )}
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 w-12 text-center">No</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 w-12">No</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[140px]">Part No.</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[200px]">Description</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 w-24">Qty</th>
@@ -171,7 +173,7 @@ const MaterialSection: React.FC<Props> = ({
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[100px]">PO</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[200px]">Note</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[140px]">Date</th>
-              {isEditMode && <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider w-12 text-center">Delete</th>}
+              {isEditMode && <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider w-12">Action</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -181,7 +183,7 @@ const MaterialSection: React.FC<Props> = ({
                 className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} hover:bg-teal-50/40 transition-colors ${selectedIndices.has(idx) ? 'bg-teal-50' : ''}`}
               >
                 {isEditMode && (
-                  <td className="px-4 py-2 border-r border-slate-100 text-center">
+                  <td className="px-4 py-2 border-r border-slate-100">
                     <input 
                       type="checkbox" 
                       className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
@@ -190,14 +192,14 @@ const MaterialSection: React.FC<Props> = ({
                     />
                   </td>
                 )}
-                <td className="px-4 py-3 text-sm font-medium text-slate-500 text-center border-r border-slate-100">{idx + 1}</td>
+                <td className="px-4 py-3 text-sm font-medium text-slate-500 border-r border-slate-100">{idx + 1}</td>
                 <td className="px-4 py-2 border-r border-slate-100">
                   <input 
                     readOnly={!isEditMode}
                     value={mat.partNo}
                     onChange={(e) => handleInputChange(idx, 'partNo', e.target.value)}
-                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
-                    placeholder="PN-123"
+                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 text-center placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
+                    placeholder="PN-..."
                   />
                 </td>
                 <td className="px-4 py-2 border-r border-slate-100">
@@ -205,8 +207,8 @@ const MaterialSection: React.FC<Props> = ({
                     readOnly={!isEditMode}
                     value={mat.description}
                     onChange={(e) => handleInputChange(idx, 'description', e.target.value)}
-                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
-                    placeholder="Describe item..."
+                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 text-center placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
+                    placeholder="Describe..."
                   />
                 </td>
                 <td className="px-4 py-2 border-r border-slate-100">
@@ -233,8 +235,8 @@ const MaterialSection: React.FC<Props> = ({
                     readOnly={!isEditMode}
                     value={mat.availability}
                     onChange={(e) => handleInputChange(idx, 'availability', e.target.value)}
-                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
-                    placeholder="In Stock"
+                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 text-center placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
+                    placeholder="Stock?"
                   />
                 </td>
                 <td className="px-4 py-2 border-r border-slate-100">
@@ -242,8 +244,8 @@ const MaterialSection: React.FC<Props> = ({
                     readOnly={!isEditMode}
                     value={mat.pr}
                     onChange={(e) => handleInputChange(idx, 'pr', e.target.value)}
-                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
-                    placeholder="PR-..."
+                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 text-center placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
+                    placeholder="PR"
                   />
                 </td>
                 <td className="px-4 py-2 border-r border-slate-100">
@@ -251,8 +253,8 @@ const MaterialSection: React.FC<Props> = ({
                     readOnly={!isEditMode}
                     value={mat.po}
                     onChange={(e) => handleInputChange(idx, 'po', e.target.value)}
-                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
-                    placeholder="PO-..."
+                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 text-center placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
+                    placeholder="PO"
                   />
                 </td>
                 <td className="px-4 py-2 border-r border-slate-100">
@@ -260,8 +262,8 @@ const MaterialSection: React.FC<Props> = ({
                     readOnly={!isEditMode}
                     value={mat.note}
                     onChange={(e) => handleInputChange(idx, 'note', e.target.value)}
-                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
-                    placeholder="Reference..."
+                    className={`w-full bg-transparent text-sm border-none focus:ring-0 px-0 text-center placeholder:text-slate-300 ${!isEditMode ? 'cursor-default' : ''}`}
+                    placeholder="..."
                   />
                 </td>
                 <td className="px-4 py-2 border-r border-slate-100">
@@ -270,15 +272,15 @@ const MaterialSection: React.FC<Props> = ({
                     type="date"
                     value={mat.dateChange}
                     onChange={(e) => handleInputChange(idx, 'dateChange', e.target.value)}
-                    className={`w-full bg-transparent text-xs border-none focus:ring-0 px-0 ${!isEditMode ? 'cursor-default' : ''}`}
+                    className={`w-full bg-transparent text-xs border-none focus:ring-0 px-0 text-center ${!isEditMode ? 'cursor-default' : ''}`}
                   />
                 </td>
                 {isEditMode && (
-                  <td className="px-4 py-2 text-center">
+                  <td className="px-4 py-2">
                     <button 
                       onClick={() => handleIndividualDelete(idx)}
                       className="text-slate-300 hover:text-rose-500 transition-colors p-1"
-                      title="Delete this row"
+                      title="Delete Row"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -290,14 +292,14 @@ const MaterialSection: React.FC<Props> = ({
         </table>
       </div>
 
-      {/* Mobile Grid View */}
+      {/* Mobile Grid View - Editable Cards */}
       <div className="lg:hidden p-4 space-y-4 bg-slate-50/30">
         {materials.map((mat, idx) => (
           <div 
             key={idx} 
-            className={`bg-white rounded-xl border transition-all duration-200 shadow-sm overflow-hidden flex flex-col relative ${selectedIndices.has(idx) ? 'border-teal-500 ring-2 ring-teal-500/20' : 'border-slate-200'}`}
+            className={`bg-white rounded-xl border transition-all duration-200 shadow-sm overflow-hidden flex flex-col relative ${selectedIndices.has(idx) ? 'border-teal-500 ring-2 ring-teal-500/10' : 'border-slate-200'}`}
           >
-            {/* Card Header with Select & Individual Delete */}
+            {/* Card Header */}
             <div className={`px-4 py-3 border-b flex justify-between items-center transition-colors ${selectedIndices.has(idx) ? 'bg-teal-50 border-teal-100' : 'bg-slate-50 border-slate-100'}`}>
               <div 
                 className="flex items-center space-x-3 flex-grow cursor-pointer"
@@ -320,49 +322,97 @@ const MaterialSection: React.FC<Props> = ({
                     handleIndividualDelete(idx);
                   }}
                   className="p-2 text-rose-400 hover:text-rose-600 active:scale-90 transition-all bg-white rounded-lg border border-rose-100 shadow-sm"
-                  title="Delete Record"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
             </div>
 
-            {/* Card Content */}
-            <div className="p-4 space-y-4" onClick={() => isEditMode && toggleSelectRow(idx)}>
+            {/* Editable Card Body */}
+            <div className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
+                {/* Part No */}
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Part No</label>
-                  <div className="text-sm font-semibold text-slate-700 truncate">{mat.partNo || '—'}</div>
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Part No</label>
+                  {isEditMode ? (
+                    <input 
+                      value={mat.partNo}
+                      onChange={(e) => handleInputChange(idx, 'partNo', e.target.value)}
+                      className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
+                    />
+                  ) : (
+                    <div className="text-sm font-semibold text-slate-700 truncate">{mat.partNo || '—'}</div>
+                  )}
                 </div>
+
+                {/* Qty & UoM */}
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Quantity</label>
-                  <div className="text-sm font-semibold text-slate-700">{mat.qty || '0'} {mat.uom || 'EA'}</div>
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Quantity</label>
+                  {isEditMode ? (
+                    <div className="flex gap-1">
+                      <input 
+                        type="number"
+                        value={mat.qty}
+                        onChange={(e) => handleInputChange(idx, 'qty', e.target.value)}
+                        className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:ring-1 focus:ring-teal-500 outline-none"
+                      />
+                      <input 
+                        value={mat.uom}
+                        onChange={(e) => handleInputChange(idx, 'uom', e.target.value)}
+                        className="w-16 text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-1 py-1 focus:ring-1 focus:ring-teal-500 outline-none uppercase text-center"
+                        placeholder="UoM"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-sm font-semibold text-slate-700">{mat.qty || '0'} {mat.uom || 'EA'}</div>
+                  )}
                 </div>
+
+                {/* Description */}
                 <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Description</label>
-                  <div className="text-sm font-medium text-slate-600 line-clamp-2 leading-relaxed">
-                    {mat.description || 'No description provided'}
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Description</label>
+                  {isEditMode ? (
+                    <textarea 
+                      value={mat.description}
+                      onChange={(e) => handleInputChange(idx, 'description', e.target.value)}
+                      rows={2}
+                      className="w-full text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-teal-500 outline-none resize-none"
+                    />
+                  ) : (
+                    <div className="text-sm font-medium text-slate-600 line-clamp-2 leading-relaxed">
+                      {mat.description || 'No description provided'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Advanced Fields - Only visible or grouped on mobile */}
+                <div className="col-span-2 grid grid-cols-2 gap-4 pt-2 border-t border-slate-50">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 font-bold uppercase">Availability</label>
+                    {isEditMode ? (
+                      <input 
+                        value={mat.availability}
+                        onChange={(e) => handleInputChange(idx, 'availability', e.target.value)}
+                        className="w-full text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none"
+                      />
+                    ) : (
+                      <div className="text-xs font-bold text-slate-600">{mat.availability || '—'}</div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-400 font-bold uppercase">PR / PO</label>
+                    {isEditMode ? (
+                      <div className="flex gap-1">
+                        <input value={mat.pr} onChange={(e) => handleInputChange(idx, 'pr', e.target.value)} className="w-full text-xs bg-slate-50 border border-slate-200 rounded px-1 py-1" placeholder="PR" />
+                        <input value={mat.po} onChange={(e) => handleInputChange(idx, 'po', e.target.value)} className="w-full text-xs bg-slate-50 border border-slate-200 rounded px-1 py-1" placeholder="PO" />
+                      </div>
+                    ) : (
+                      <div className="text-xs font-bold text-slate-600">{mat.pr || mat.po ? `${mat.pr || '-'}/${mat.po || '-'}` : '—'}</div>
+                    )}
                   </div>
                 </div>
               </div>
-              
-              {/* Secondary Details for Mobile */}
-              <div className="pt-2 border-t border-slate-50 grid grid-cols-2 gap-y-2 text-[11px]">
-                <div className="flex justify-between pr-2 border-r border-slate-100">
-                  <span className="text-slate-400 font-medium">Avail:</span>
-                  <span className="text-slate-600 font-bold">{mat.availability || '—'}</span>
-                </div>
-                <div className="flex justify-between pl-2">
-                  <span className="text-slate-400 font-medium">PR/PO:</span>
-                  <span className="text-slate-600 font-bold">{mat.pr || mat.po ? `${mat.pr || '-'}/${mat.po || '-'}` : '—'}</span>
-                </div>
-              </div>
             </div>
-            
-            {/* Selection Overlay for Edit Mode */}
-            {isEditMode && !selectedIndices.has(idx) && (
-              <div className="absolute inset-0 bg-white/5 pointer-events-none" />
-            )}
           </div>
         ))}
       </div>
