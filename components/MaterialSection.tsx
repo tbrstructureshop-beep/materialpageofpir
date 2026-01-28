@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Material } from '../types';
-import { Plus, Trash2, RotateCcw, Save, Edit2, X, Loader2 } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, Save, Edit2, X, Loader2, CheckSquare, Square } from 'lucide-react';
 
 interface Props {
   materials: Material[];
@@ -37,6 +37,17 @@ const MaterialSection: React.FC<Props> = ({
     }
   }, [isEditMode]);
 
+  // Cleanup stale selections if materials are removed
+  useEffect(() => {
+    setSelectedIndices(prev => {
+      const next = new Set<number>();
+      prev.forEach(idx => {
+        if (idx < materials.length) next.add(idx);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [materials.length]);
+
   const handleInputChange = (index: number, field: keyof Material, value: string) => {
     onUpdateMaterial(index, { ...materials[index], [field]: value });
   };
@@ -60,9 +71,14 @@ const MaterialSection: React.FC<Props> = ({
   };
 
   const handleDeleteSelected = () => {
-    const indices = Array.from(selectedIndices);
+    const indices = Array.from(selectedIndices).sort((a, b) => b - a);
     onRemoveRows(indices);
     setSelectedIndices(new Set());
+  };
+
+  const handleIndividualDelete = (idx: number) => {
+    onRemoveRows([idx]);
+    // The useEffect cleanup will handle the selection set update
   };
 
   const isAllSelected = materials.length > 0 && selectedIndices.size === materials.length;
@@ -74,7 +90,7 @@ const MaterialSection: React.FC<Props> = ({
         <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-20">
           <div className="flex flex-col items-center space-y-3">
             <Loader2 className="w-10 h-10 text-teal-600 animate-spin" />
-            <span className="text-sm font-semibold text-slate-600 uppercase tracking-widest">Loading Materials...</span>
+            <span className="text-sm font-semibold text-slate-600 uppercase tracking-widest">Updating Records...</span>
           </div>
         </div>
       )}
@@ -106,16 +122,11 @@ const MaterialSection: React.FC<Props> = ({
         {/* MOBILE SELECT ALL BAR */}
         {isEditMode && (
           <div className="lg:hidden flex items-center justify-between p-3 bg-teal-50 border border-teal-100 rounded-xl animate-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center space-x-3">
-              <input 
-                type="checkbox" 
-                id="mobile-select-all"
-                className="w-5 h-5 rounded border-teal-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
-                checked={isAllSelected}
-                ref={(el) => { if (el) el.indeterminate = isSomeSelected; }}
-                onChange={toggleSelectAll}
-              />
-              <label htmlFor="mobile-select-all" className="text-sm font-bold text-teal-800 uppercase tracking-tight">
+            <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={toggleSelectAll}>
+              <div className="text-teal-600">
+                {isAllSelected ? <CheckSquare className="w-5 h-5 fill-current" /> : isSomeSelected ? <CheckSquare className="w-5 h-5 opacity-50" /> : <Square className="w-5 h-5" />}
+              </div>
+              <label className="text-sm font-bold text-teal-800 uppercase tracking-tight cursor-pointer">
                 Select All ({materials.length})
               </label>
             </div>
@@ -132,7 +143,7 @@ const MaterialSection: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Desktop Table */}
+      {/* Desktop Table View */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -160,7 +171,7 @@ const MaterialSection: React.FC<Props> = ({
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[100px]">PO</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[200px]">Note</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[140px]">Date</th>
-              {isEditMode && <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider w-12">Action</th>}
+              {isEditMode && <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider w-12 text-center">Delete</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -265,8 +276,9 @@ const MaterialSection: React.FC<Props> = ({
                 {isEditMode && (
                   <td className="px-4 py-2 text-center">
                     <button 
-                      onClick={() => onRemoveRows([idx])}
+                      onClick={() => handleIndividualDelete(idx)}
                       className="text-slate-300 hover:text-rose-500 transition-colors p-1"
+                      title="Delete this row"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -278,58 +290,79 @@ const MaterialSection: React.FC<Props> = ({
         </table>
       </div>
 
-      {/* Mobile Grid */}
+      {/* Mobile Grid View */}
       <div className="lg:hidden p-4 space-y-4 bg-slate-50/30">
         {materials.map((mat, idx) => (
           <div 
             key={idx} 
-            className={`bg-white rounded-xl border transition-all duration-200 shadow-sm p-4 space-y-3 relative ${selectedIndices.has(idx) ? 'border-teal-500 ring-1 ring-teal-500' : 'border-slate-200'}`}
-            onClick={() => isEditMode && toggleSelectRow(idx)}
+            className={`bg-white rounded-xl border transition-all duration-200 shadow-sm overflow-hidden flex flex-col relative ${selectedIndices.has(idx) ? 'border-teal-500 ring-2 ring-teal-500/20' : 'border-slate-200'}`}
           >
-            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
+            {/* Card Header with Select & Individual Delete */}
+            <div className={`px-4 py-3 border-b flex justify-between items-center transition-colors ${selectedIndices.has(idx) ? 'bg-teal-50 border-teal-100' : 'bg-slate-50 border-slate-100'}`}>
+              <div 
+                className="flex items-center space-x-3 flex-grow cursor-pointer"
+                onClick={() => isEditMode && toggleSelectRow(idx)}
+              >
                 {isEditMode && (
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
-                    checked={selectedIndices.has(idx)}
-                    onChange={() => {}} // Handled by div click
-                    onClick={(e) => e.stopPropagation()}
-                  />
+                  <div className="text-teal-600">
+                    {selectedIndices.has(idx) ? <CheckSquare className="w-5 h-5 fill-current" /> : <Square className="w-5 h-5" />}
+                  </div>
                 )}
-                <span className="text-xs font-bold text-teal-600 uppercase">Material {idx + 1}</span>
+                <span className={`text-xs font-black uppercase tracking-widest ${selectedIndices.has(idx) ? 'text-teal-700' : 'text-slate-500'}`}>
+                  Record {idx + 1}
+                </span>
               </div>
-              <div className="flex items-center space-x-3">
-                {isEditMode && (
-                  <>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveRows([idx]);
-                      }}
-                      className="text-rose-400 hover:text-rose-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">Select</span>
-                  </>
-                )}
+              
+              {isEditMode && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleIndividualDelete(idx);
+                  }}
+                  className="p-2 text-rose-400 hover:text-rose-600 active:scale-90 transition-all bg-white rounded-lg border border-rose-100 shadow-sm"
+                  title="Delete Record"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Card Content */}
+            <div className="p-4 space-y-4" onClick={() => isEditMode && toggleSelectRow(idx)}>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Part No</label>
+                  <div className="text-sm font-semibold text-slate-700 truncate">{mat.partNo || '—'}</div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Quantity</label>
+                  <div className="text-sm font-semibold text-slate-700">{mat.qty || '0'} {mat.uom || 'EA'}</div>
+                </div>
+                <div className="col-span-2 space-y-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Description</label>
+                  <div className="text-sm font-medium text-slate-600 line-clamp-2 leading-relaxed">
+                    {mat.description || 'No description provided'}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Secondary Details for Mobile */}
+              <div className="pt-2 border-t border-slate-50 grid grid-cols-2 gap-y-2 text-[11px]">
+                <div className="flex justify-between pr-2 border-r border-slate-100">
+                  <span className="text-slate-400 font-medium">Avail:</span>
+                  <span className="text-slate-600 font-bold">{mat.availability || '—'}</span>
+                </div>
+                <div className="flex justify-between pl-2">
+                  <span className="text-slate-400 font-medium">PR/PO:</span>
+                  <span className="text-slate-600 font-bold">{mat.pr || mat.po ? `${mat.pr || '-'}/${mat.po || '-'}` : '—'}</span>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 font-bold uppercase">Part No</label>
-                <div className="text-sm font-medium text-slate-700 truncate">{mat.partNo || '—'}</div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-400 font-bold uppercase">Qty ({mat.uom || 'UoM'})</label>
-                <div className="text-sm font-medium text-slate-700">{mat.qty || '0'}</div>
-              </div>
-              <div className="col-span-2 space-y-1">
-                <label className="text-[10px] text-slate-400 font-bold uppercase">Description</label>
-                <div className="text-sm font-medium text-slate-700 truncate">{mat.description || 'No description'}</div>
-              </div>
-            </div>
+            
+            {/* Selection Overlay for Edit Mode */}
+            {isEditMode && !selectedIndices.has(idx) && (
+              <div className="absolute inset-0 bg-white/5 pointer-events-none" />
+            )}
           </div>
         ))}
       </div>
@@ -340,15 +373,15 @@ const MaterialSection: React.FC<Props> = ({
           <>
             <button 
               onClick={onAddRow}
-              className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm"
             >
-              <Plus className="w-4 h-4" /> <span>Add Row</span>
+              <Plus className="w-4 h-4" /> <span>Add New</span>
             </button>
             
             {selectedIndices.size > 0 ? (
               <button 
                 onClick={handleDeleteSelected}
-                className="flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all animate-in zoom-in-95 duration-200"
+                className="flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all animate-in zoom-in-95 duration-200 shadow-lg shadow-rose-100"
               >
                 <Trash2 className="w-4 h-4" /> <span>Delete Selected ({selectedIndices.size})</span>
               </button>
@@ -372,14 +405,14 @@ const MaterialSection: React.FC<Props> = ({
             
             <button 
               onClick={onSave}
-              className="flex items-center space-x-2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-teal-100 transition-all"
+              className="flex items-center space-x-2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-teal-100 transition-all w-full sm:w-auto justify-center"
             >
               <Save className="w-4 h-4" /> <span>Save Changes</span>
             </button>
           </>
         ) : (
-          <div className="text-sm text-slate-500 font-medium">
-            Viewing {materials.length} material records for this finding.
+          <div className="text-sm text-slate-500 font-medium py-1">
+            Displaying {materials.length} material records. Use 'Edit' to modify or delete.
           </div>
         )}
       </div>
