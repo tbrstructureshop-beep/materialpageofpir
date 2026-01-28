@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { GeneralData, Finding, Material, DashboardData } from './types';
-import { fetchDashboardData } from './services/api';
+import { fetchDashboardData, saveMaterialData } from './services/api';
 import GeneralInfoCard from './components/GeneralInfoCard';
 import FindingSection from './components/FindingSection';
 import MaterialSection from './components/MaterialSection';
@@ -16,25 +16,34 @@ const App: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [currentMaterials, setCurrentMaterials] = useState<Material[]>([]);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (showFullLoader = true) => {
+    if (showFullLoader) setLoading(true);
+    else setTransitionLoading(true);
+    
     setError(null);
     try {
       const result = await fetchDashboardData();
       setData(result);
-      setSelectedFindingIndex(null);
-      setCurrentMaterials([]);
-      setIsEditMode(false);
+      
+      // If we already had a finding selected, refresh its local materials
+      if (selectedFindingIndex !== null) {
+        const findingName = result.findings[selectedFindingIndex].finding;
+        const materials = result.materialsByFinding[findingName] || [];
+        setCurrentMaterials(materials.length > 0 ? [...materials] : [createEmptyMaterial()]);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard data. Please check your connection.");
     } finally {
-      setTimeout(() => setLoading(false), 800);
+      setTimeout(() => {
+        setLoading(false);
+        setTransitionLoading(false);
+      }, 800);
     }
-  }, []);
+  }, [selectedFindingIndex]);
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, []); // Only on mount
 
   const handleFindingChange = (index: number | null) => {
     if (index === selectedFindingIndex) return;
@@ -81,7 +90,6 @@ const App: React.FC = () => {
   const handleDeleteRows = (indices: number[]) => {
     if (indices.length === 0) return;
     
-    // Check if any of the rows being deleted have significant data
     const hasData = indices.some(idx => {
       const m = currentMaterials[idx];
       return m && (m.partNo || m.description || m.qty);
@@ -109,11 +117,23 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
-    console.log("Saving data for finding:", data?.findings[selectedFindingIndex!]?.finding);
-    console.log("Materials:", currentMaterials);
-    alert("Data saved successfully! (Check console for details)");
-    setIsEditMode(false);
+  const handleSave = async () => {
+    if (selectedFindingIndex === null || !data) return;
+    
+    const findingName = data.findings[selectedFindingIndex].finding;
+    setTransitionLoading(true);
+    
+    try {
+      await saveMaterialData(findingName, currentMaterials);
+      alert("Data synchronized with Material List successfully!");
+      setIsEditMode(false);
+      // Re-fetch to ensure sync is solid
+      await loadData(false);
+    } catch (err: any) {
+      alert("Error syncing with backend: " + err.message);
+    } finally {
+      setTransitionLoading(false);
+    }
   };
 
   if (loading) {
@@ -125,7 +145,7 @@ const App: React.FC = () => {
         </div>
         <div className="text-center space-y-2">
           <h2 className="text-xl font-bold text-slate-800 tracking-tight">PIR DASHBOARD <span className="text-teal-600">PRO</span></h2>
-          <p className="text-slate-500 font-medium animate-pulse">Syncing material records...</p>
+          <p className="text-slate-500 font-medium animate-pulse">Establishing secure link...</p>
         </div>
       </div>
     );
@@ -136,10 +156,10 @@ const App: React.FC = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-4 text-center">
         <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 max-w-md w-full">
           <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Oops! Load Failed</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Sync Error</h1>
           <p className="text-slate-600 mb-6">{error}</p>
           <button 
-            onClick={loadData}
+            onClick={() => loadData()}
             className="flex items-center justify-center space-x-2 w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-teal-200"
           >
             <RefreshCw className="w-5 h-5" />
@@ -160,7 +180,7 @@ const App: React.FC = () => {
             </div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">PIR DASHBOARD <span className="text-teal-600">PRO</span></h1>
           </div>
-          <div className="text-xs text-slate-400 font-medium">Last Sync: {new Date().toLocaleTimeString()}</div>
+          <div className="text-xs text-slate-400 font-medium">Auto-Sync Enabled</div>
         </div>
       </header>
 
