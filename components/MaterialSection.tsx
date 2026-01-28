@@ -9,7 +9,8 @@ interface Props {
   onToggleEdit: () => void;
   onUpdateMaterial: (index: number, updated: Material) => void;
   onAddRow: () => void;
-  onRemoveRow: () => void;
+  onRemoveRows: (indices: number[]) => void;
+  onRemoveLastRow: () => void;
   onReset: () => void;
   onSave: () => void;
   isLoading?: boolean;
@@ -21,7 +22,8 @@ const MaterialSection: React.FC<Props> = ({
   onToggleEdit,
   onUpdateMaterial,
   onAddRow,
-  onRemoveRow,
+  onRemoveRows,
+  onRemoveLastRow,
   onReset,
   onSave,
   isLoading = false
@@ -55,6 +57,12 @@ const MaterialSection: React.FC<Props> = ({
       next.add(index);
     }
     setSelectedIndices(next);
+  };
+
+  const handleDeleteSelected = () => {
+    const indices = Array.from(selectedIndices);
+    onRemoveRows(indices);
+    setSelectedIndices(new Set());
   };
 
   const isAllSelected = materials.length > 0 && selectedIndices.size === materials.length;
@@ -112,9 +120,13 @@ const MaterialSection: React.FC<Props> = ({
               </label>
             </div>
             {selectedIndices.size > 0 && (
-              <span className="text-[10px] font-black text-teal-600 bg-white px-2 py-1 rounded-full border border-teal-200 shadow-sm">
-                {selectedIndices.size} SELECTED
-              </span>
+              <button 
+                onClick={handleDeleteSelected}
+                className="flex items-center space-x-1.5 text-[10px] font-black text-rose-600 bg-white px-3 py-1.5 rounded-full border border-rose-200 shadow-sm hover:bg-rose-50 active:scale-95 transition-all"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>DELETE {selectedIndices.size}</span>
+              </button>
             )}
           </div>
         )}
@@ -147,7 +159,8 @@ const MaterialSection: React.FC<Props> = ({
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[100px]">PR</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[100px]">PO</th>
               <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[200px]">Note</th>
-              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider min-w-[140px]">Date</th>
+              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider border-r border-teal-500 min-w-[140px]">Date</th>
+              {isEditMode && <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider w-12">Action</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -240,7 +253,7 @@ const MaterialSection: React.FC<Props> = ({
                     placeholder="Reference..."
                   />
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-4 py-2 border-r border-slate-100">
                   <input 
                     readOnly={!isEditMode}
                     type="date"
@@ -249,6 +262,16 @@ const MaterialSection: React.FC<Props> = ({
                     className={`w-full bg-transparent text-xs border-none focus:ring-0 px-0 ${!isEditMode ? 'cursor-default' : ''}`}
                   />
                 </td>
+                {isEditMode && (
+                  <td className="px-4 py-2 text-center">
+                    <button 
+                      onClick={() => onRemoveRows([idx])}
+                      className="text-slate-300 hover:text-rose-500 transition-colors p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -276,9 +299,22 @@ const MaterialSection: React.FC<Props> = ({
                 )}
                 <span className="text-xs font-bold text-teal-600 uppercase">Material {idx + 1}</span>
               </div>
-              {isEditMode && (
-                <span className="text-[10px] text-slate-400 font-bold">CLICK TO SELECT</span>
-              )}
+              <div className="flex items-center space-x-3">
+                {isEditMode && (
+                  <>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveRows([idx]);
+                      }}
+                      className="text-rose-400 hover:text-rose-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">Select</span>
+                  </>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -308,19 +344,32 @@ const MaterialSection: React.FC<Props> = ({
             >
               <Plus className="w-4 h-4" /> <span>Add Row</span>
             </button>
-            <button 
-              onClick={onRemoveRow}
-              className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-all"
-            >
-              <Trash2 className="w-4 h-4" /> <span>Remove Row</span>
-            </button>
+            
+            {selectedIndices.size > 0 ? (
+              <button 
+                onClick={handleDeleteSelected}
+                className="flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all animate-in zoom-in-95 duration-200"
+              >
+                <Trash2 className="w-4 h-4" /> <span>Delete Selected ({selectedIndices.size})</span>
+              </button>
+            ) : (
+              <button 
+                onClick={onRemoveLastRow}
+                className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+              >
+                <Trash2 className="w-4 h-4" /> <span>Remove Last</span>
+              </button>
+            )}
+
             <button 
               onClick={onReset}
               className="flex items-center space-x-2 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-all"
             >
-              <RotateCcw className="w-4 h-4" /> <span>Reset</span>
+              <RotateCcw className="w-4 h-4" /> <span>Reset All</span>
             </button>
+            
             <div className="flex-grow" />
+            
             <button 
               onClick={onSave}
               className="flex items-center space-x-2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-teal-100 transition-all"

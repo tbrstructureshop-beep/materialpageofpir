@@ -22,22 +22,19 @@ const App: React.FC = () => {
     try {
       const result = await fetchDashboardData();
       setData(result);
-      // Reset state if refresh
       setSelectedFindingIndex(null);
       setCurrentMaterials([]);
       setIsEditMode(false);
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard data. Please check your connection.");
     } finally {
-      // Simulate a slightly longer load for "world-class" transition feel
       setTimeout(() => setLoading(false), 800);
     }
   }, []);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadData]);
 
   const handleFindingChange = (index: number | null) => {
     if (index === selectedFindingIndex) return;
@@ -49,13 +46,11 @@ const App: React.FC = () => {
     if (index !== null && data) {
       const findingName = data.findings[index].finding;
       const materials = data.materialsByFinding[findingName] || [];
-      // If no materials, start with one empty row
       setCurrentMaterials(materials.length > 0 ? [...materials] : [createEmptyMaterial()]);
     } else {
       setCurrentMaterials([]);
     }
 
-    // Brief timeout to show the "Table Data Loading" state
     setTimeout(() => {
       setTransitionLoading(false);
     }, 400);
@@ -83,20 +78,33 @@ const App: React.FC = () => {
     setCurrentMaterials([...currentMaterials, createEmptyMaterial()]);
   };
 
+  const handleDeleteRows = (indices: number[]) => {
+    if (indices.length === 0) return;
+    
+    // Check if any of the rows being deleted have significant data
+    const hasData = indices.some(idx => {
+      const m = currentMaterials[idx];
+      return m && (m.partNo || m.description || m.qty);
+    });
+
+    if (hasData) {
+      const msg = indices.length === 1 
+        ? "This row contains data. Are you sure you want to delete it?" 
+        : `Are you sure you want to delete ${indices.length} selected items? Some contain data.`;
+      if (!window.confirm(msg)) return;
+    }
+
+    const next = currentMaterials.filter((_, idx) => !indices.includes(idx));
+    setCurrentMaterials(next.length > 0 ? next : [createEmptyMaterial()]);
+  };
+
   const handleRemoveLastRow = () => {
     if (currentMaterials.length === 0) return;
-    const last = currentMaterials[currentMaterials.length - 1];
-    const isBlank = !last.partNo && !last.description && !last.qty;
-    
-    if (!isBlank) {
-      if (!window.confirm("The last row has data. Are you sure you want to remove it?")) return;
-    }
-    
-    setCurrentMaterials(currentMaterials.slice(0, -1));
+    handleDeleteRows([currentMaterials.length - 1]);
   };
 
   const handleResetMaterials = () => {
-    if (window.confirm("Reset all materials for this finding?")) {
+    if (window.confirm("Reset all materials for this finding? This will revert to a single empty row.")) {
       setCurrentMaterials([createEmptyMaterial()]);
     }
   };
@@ -179,7 +187,8 @@ const App: React.FC = () => {
                   onToggleEdit={() => setIsEditMode(!isEditMode)}
                   onUpdateMaterial={handleUpdateMaterial}
                   onAddRow={handleAddRow}
-                  onRemoveRow={handleRemoveLastRow}
+                  onRemoveRows={handleDeleteRows}
+                  onRemoveLastRow={handleRemoveLastRow}
                   onReset={handleResetMaterials}
                   onSave={handleSave}
                   isLoading={transitionLoading}
